@@ -2,7 +2,6 @@ import { useState, useCallback, useRef } from "react";
 import { AXES, DEFAULT_STATE } from "@/lib/axes.ts";
 import type { AxisState, AxisKey, ButtonId, TransformResponse } from "@/lib/types.ts";
 import { TransformCache } from "@/lib/cache.ts";
-import AxisButton from "./AxisButton.tsx";
 
 const cache = new TransformCache();
 
@@ -18,7 +17,9 @@ export default function TransformPanel() {
   const [hasTransformed, setHasTransformed] = useState(false);
   const originalTextRef = useRef("");
 
+  const [activeTab, setActiveTab] = useState<AxisKey>("length");
   const isAllZero = Object.values(state).every((v) => v === 0);
+  const activeAxis = AXES.find((a) => a.key === activeTab)!;
 
   const handleTextChange = (text: string) => {
     if (text.length > 500) return;
@@ -120,56 +121,68 @@ export default function TransformPanel() {
 
       {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        {AXES.map((axis) => (
-          <div key={axis.key} className="flex flex-col items-center gap-1">
-            <span className="text-xs text-gray-500 font-medium">
+      {/* 축 탭 */}
+      <div className="flex gap-1 justify-center">
+        {AXES.map((axis) => {
+          const val = state[axis.key];
+          const isActive = activeTab === axis.key;
+          return (
+            <button
+              key={axis.key}
+              onClick={() => setActiveTab(axis.key)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                isActive
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            >
               {axis.label}
-            </span>
-            <div className="flex gap-1">
-              <AxisButton
-                axis={axis}
-                direction="+"
-                disabled={
-                  !originalText.trim() ||
-                  disabledButtons.has(`${axis.key}+` as ButtonId)
-                }
-                loading={loading}
-                onClick={() => handleAxisClick(axis.key, "+")}
-              />
-              <AxisButton
-                axis={axis}
-                direction="-"
-                disabled={
-                  !originalText.trim() ||
-                  (isAllZero && !hasTransformed) ||
-                  disabledButtons.has(`${axis.key}-` as ButtonId)
-                }
-                loading={loading}
-                onClick={() => handleAxisClick(axis.key, "-")}
-              />
-            </div>
-          </div>
-        ))}
+              {val !== 0 && (
+                <span className={`ml-1 ${isActive ? "text-blue-100" : "text-blue-400"}`}>
+                  {val > 0 ? "+" : ""}{val}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {hasTransformed && (
-        <div className="flex flex-wrap gap-2 justify-center">
-          {AXES.map((axis) => {
-            const val = state[axis.key];
-            if (val === 0) return null;
-            return (
-              <span
-                key={axis.key}
-                className="px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs"
-              >
-                {axis.label} {val > 0 ? "+" : ""}
-                {val}
-              </span>
-            );
-          })}
-        </div>
-      )}
+      {/* 선택된 축의 +/- 버튼 */}
+      <div className="flex items-center justify-center gap-4">
+        <button
+          onClick={() => handleAxisClick(activeAxis.key, "-")}
+          disabled={
+            !originalText.trim() ||
+            (isAllZero && !hasTransformed) ||
+            disabledButtons.has(`${activeAxis.key}-` as ButtonId) ||
+            loading
+          }
+          title={
+            disabledButtons.has(`${activeAxis.key}-` as ButtonId)
+              ? activeAxis.disabledTooltipMinus
+              : undefined
+          }
+          className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 disabled:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {activeAxis.minusLabel}
+        </button>
+        <button
+          onClick={() => handleAxisClick(activeAxis.key, "+")}
+          disabled={
+            !originalText.trim() ||
+            disabledButtons.has(`${activeAxis.key}+` as ButtonId) ||
+            loading
+          }
+          title={
+            disabledButtons.has(`${activeAxis.key}+` as ButtonId)
+              ? activeAxis.disabledTooltipPlus
+              : undefined
+          }
+          className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {activeAxis.plusLabel}
+        </button>
+      </div>
     </div>
   );
 }
