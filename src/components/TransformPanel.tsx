@@ -18,7 +18,6 @@ export default function TransformPanel() {
   const originalTextRef = useRef("");
 
   const [activeTab, setActiveTab] = useState<AxisKey>("length");
-  const isAllZero = Object.values(state).every((v) => v === 0);
   const activeAxis = AXES.find((a) => a.key === activeTab)!;
 
   const handleTextChange = (text: string) => {
@@ -153,7 +152,6 @@ export default function TransformPanel() {
           onClick={() => handleAxisClick(activeAxis.key, "-")}
           disabled={
             !originalText.trim() ||
-            (isAllZero && !hasTransformed) ||
             disabledButtons.has(`${activeAxis.key}-` as ButtonId) ||
             loading
           }
