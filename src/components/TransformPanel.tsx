@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { AXES, DEFAULT_STATE } from "@/lib/axes.ts";
 import type { AxisState, AxisKey, ButtonId, TransformResponse } from "@/lib/types.ts";
 import { TransformCache } from "@/lib/cache.ts";
-
+import AxisButton from "./AxisButton.tsx";
 
 const cache = new TransformCache();
 
@@ -120,74 +120,56 @@ export default function TransformPanel() {
 
       {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-      <div className="flex flex-col gap-2">
-        {AXES.map((axis) => {
-          const val = state[axis.key];
-          const noText = !originalText.trim();
-          const minusDisabled =
-            noText ||
-            (isAllZero && !hasTransformed) ||
-            disabledButtons.has(`${axis.key}-` as ButtonId);
-          const plusDisabled =
-            noText ||
-            disabledButtons.has(`${axis.key}+` as ButtonId);
-
-          return (
-            <div
-              key={axis.key}
-              className="flex items-center gap-2"
-            >
-              <span className="w-12 text-sm text-gray-600 font-medium text-right shrink-0">
-                {axis.label}
-              </span>
-              <button
-                onClick={() => handleAxisClick(axis.key, "-")}
-                disabled={minusDisabled || loading}
-                title={minusDisabled ? axis.disabledTooltipMinus : undefined}
-                className={`w-8 h-8 rounded-full text-lg font-bold flex items-center justify-center transition-all shrink-0 ${
-                  minusDisabled || loading
-                    ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                    : "bg-gray-200 text-gray-600 hover:bg-gray-300 active:bg-gray-400 cursor-pointer"
-                }`}
-              >
-                -
-              </button>
-              <div className="flex-1 h-2 bg-gray-100 rounded-full relative overflow-hidden">
-                {val !== 0 && (
-                  <div
-                    className={`absolute top-0 h-full rounded-full transition-all ${
-                      val > 0 ? "bg-blue-400" : "bg-orange-400"
-                    }`}
-                    style={{
-                      left: val > 0 ? "50%" : undefined,
-                      right: val < 0 ? "50%" : undefined,
-                      width: `${Math.min(Math.abs(val) * 10, 50)}%`,
-                    }}
-                  />
-                )}
-                <div className="absolute left-1/2 top-0 w-px h-full bg-gray-300" />
-              </div>
-              <button
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        {AXES.map((axis) => (
+          <div key={axis.key} className="flex flex-col items-center gap-1">
+            <span className="text-xs text-gray-500 font-medium">
+              {axis.label}
+            </span>
+            <div className="flex gap-1">
+              <AxisButton
+                axis={axis}
+                direction="+"
+                disabled={
+                  !originalText.trim() ||
+                  disabledButtons.has(`${axis.key}+` as ButtonId)
+                }
+                loading={loading}
                 onClick={() => handleAxisClick(axis.key, "+")}
-                disabled={plusDisabled || loading}
-                title={plusDisabled ? axis.disabledTooltipPlus : undefined}
-                className={`w-8 h-8 rounded-full text-lg font-bold flex items-center justify-center transition-all shrink-0 ${
-                  plusDisabled || loading
-                    ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                    : "bg-gray-200 text-gray-600 hover:bg-gray-300 active:bg-gray-400 cursor-pointer"
-                }`}
-              >
-                +
-              </button>
-              <span className={`w-8 text-center text-sm font-mono shrink-0 ${
-                val === 0 ? "text-gray-300" : val > 0 ? "text-blue-500" : "text-orange-500"
-              }`}>
-                {val > 0 ? "+" : ""}{val}
-              </span>
+              />
+              <AxisButton
+                axis={axis}
+                direction="-"
+                disabled={
+                  !originalText.trim() ||
+                  (isAllZero && !hasTransformed) ||
+                  disabledButtons.has(`${axis.key}-` as ButtonId)
+                }
+                loading={loading}
+                onClick={() => handleAxisClick(axis.key, "-")}
+              />
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
+
+      {hasTransformed && (
+        <div className="flex flex-wrap gap-2 justify-center">
+          {AXES.map((axis) => {
+            const val = state[axis.key];
+            if (val === 0) return null;
+            return (
+              <span
+                key={axis.key}
+                className="px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs"
+              >
+                {axis.label} {val > 0 ? "+" : ""}
+                {val}
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
