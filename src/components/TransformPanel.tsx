@@ -14,6 +14,7 @@ export default function TransformPanel() {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [hasTransformed, setHasTransformed] = useState(false);
   const originalTextRef = useRef("");
 
@@ -94,6 +95,7 @@ export default function TransformPanel() {
     [state],
   );
 
+  const displayedText = hasTransformed ? currentText : originalText;
   const charCount = originalText.length;
 
   return (
@@ -108,7 +110,30 @@ export default function TransformPanel() {
           className="w-full p-4 border-2 border-gray-200 rounded-xl resize-none focus:outline-none focus:border-blue-400 text-gray-800"
           readOnly={loading}
         />
-        <div className="absolute bottom-2 right-3 text-xs text-gray-400">
+        <div className="absolute bottom-2 right-3 flex items-center gap-2 text-xs text-gray-400">
+          {displayedText && (
+            <>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(displayedText);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }}
+                className="hover:text-gray-600 cursor-pointer"
+                title="복사하기"
+              >
+                {copied ? "복사됨!" : "복사"}
+              </button>
+              <button
+                onClick={() => handleTextChange("")}
+                className="hover:text-gray-600 cursor-pointer"
+                title="모두 지우기"
+              >
+                지우기
+              </button>
+              <span className="text-gray-300">|</span>
+            </>
+          )}
           {charCount}/500
         </div>
         {loading && (
