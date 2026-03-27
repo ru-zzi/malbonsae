@@ -1,9 +1,34 @@
 import { useState, useCallback, useRef } from "react";
 import { AXES, DEFAULT_STATE } from "@/lib/axes.ts";
-import type { AxisState, AxisKey, ButtonId, TransformResponse } from "@/lib/types.ts";
+import type {
+  AxisState,
+  AxisKey,
+  ButtonId,
+  TransformResponse,
+} from "@/lib/types.ts";
 import { TransformCache } from "@/lib/cache.ts";
 
 const cache = new TransformCache();
+
+const CopyIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const ClearIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
 
 export default function TransformPanel() {
   const [originalText, setOriginalText] = useState("");
@@ -71,9 +96,7 @@ export default function TransformPanel() {
 
         if (!res.ok) {
           const data = await res.json();
-          throw new Error(
-            data.error || "문장 변환에 실패했습니다.",
-          );
+          throw new Error(data.error || "문장 변환에 실패했습니다.");
         }
 
         const data: TransformResponse = await res.json();
@@ -97,56 +120,66 @@ export default function TransformPanel() {
 
   const displayedText = hasTransformed ? currentText : originalText;
   const charCount = originalText.length;
+  const noText = !originalText.trim();
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4">
-      <div className="relative">
+    <div className="w-full space-y-5">
+      {/* 텍스트 영역 */}
+      <div className="relative group">
         <textarea
-          value={hasTransformed ? currentText : originalText}
+          value={displayedText}
           onChange={(e) => handleTextChange(e.target.value)}
           placeholder="다듬고 싶은 문장을 입력하세요..."
-          rows={4}
+          rows={5}
           maxLength={500}
-          className="w-full p-4 border-2 border-gray-200 rounded-xl resize-none focus:outline-none focus:border-blue-400 text-gray-800"
+          className="w-full p-5 pb-10 bg-white border border-slate-200 rounded-2xl resize-none shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-slate-700 text-base leading-relaxed placeholder:text-slate-300 transition-all"
           readOnly={loading}
         />
-        <div className="absolute bottom-2 right-3 flex items-center gap-2 text-xs text-gray-400">
-          {displayedText && (
-            <>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(displayedText);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                }}
-                className="hover:text-gray-600 cursor-pointer"
-                title="복사하기"
-              >
-                {copied ? "복사됨!" : "복사"}
-              </button>
-              <button
-                onClick={() => handleTextChange("")}
-                className="hover:text-gray-600 cursor-pointer"
-                title="모두 지우기"
-              >
-                지우기
-              </button>
-              <span className="text-gray-300">|</span>
-            </>
-          )}
-          {charCount}/500
+        <div className="absolute bottom-3 left-5 right-5 flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            {displayedText && (
+              <>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(displayedText);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  }}
+                  className="p-1.5 rounded-md text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-all cursor-pointer"
+                  title="복사하기"
+                >
+                  {copied ? <CheckIcon /> : <CopyIcon />}
+                </button>
+                <button
+                  onClick={() => handleTextChange("")}
+                  className="p-1.5 rounded-md text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-all cursor-pointer"
+                  title="모두 지우기"
+                >
+                  <ClearIcon />
+                </button>
+              </>
+            )}
+          </div>
+          <span className="text-xs text-slate-300 tabular-nums">
+            {charCount}/500
+          </span>
         </div>
         {loading && (
-          <div className="absolute inset-0 bg-white/60 rounded-xl flex items-center justify-center">
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-sm rounded-2xl flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
       </div>
 
-      {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+      {/* 에러 */}
+      {error && (
+        <p className="text-red-500 text-sm text-center bg-red-50 rounded-xl py-2 px-4">
+          {error}
+        </p>
+      )}
 
       {/* 축 탭 */}
-      <div className="flex gap-1 justify-center">
+      <div className="flex gap-1.5 justify-center flex-wrap">
         {AXES.map((axis) => {
           const val = state[axis.key];
           const isActive = activeTab === axis.key;
@@ -154,16 +187,19 @@ export default function TransformPanel() {
             <button
               key={axis.key}
               onClick={() => setActiveTab(axis.key)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                 isActive
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  ? "bg-slate-800 text-white shadow-md"
+                  : "bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-slate-150"
               }`}
             >
               {axis.label}
               {val !== 0 && (
-                <span className={`ml-1 ${isActive ? "text-blue-100" : "text-blue-400"}`}>
-                  {val > 0 ? "+" : ""}{val}
+                <span
+                  className={`ml-1 text-xs ${isActive ? "text-slate-400" : "text-blue-400"}`}
+                >
+                  {val > 0 ? "+" : ""}
+                  {val}
                 </span>
               )}
             </button>
@@ -172,11 +208,11 @@ export default function TransformPanel() {
       </div>
 
       {/* 선택된 축의 +/- 버튼 */}
-      <div className="flex items-center justify-center gap-4">
+      <div className="flex items-center justify-center gap-3">
         <button
           onClick={() => handleAxisClick(activeAxis.key, "-")}
           disabled={
-            !originalText.trim() ||
+            noText ||
             disabledButtons.has(`${activeAxis.key}-` as ButtonId) ||
             loading
           }
@@ -185,14 +221,14 @@ export default function TransformPanel() {
               ? activeAxis.disabledTooltipMinus
               : undefined
           }
-          className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 disabled:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed cursor-pointer"
+          className="flex-1 max-w-48 py-3 rounded-xl text-sm font-semibold transition-all bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-slate-200 disabled:active:scale-100 cursor-pointer shadow-sm"
         >
           {activeAxis.minusLabel}
         </button>
         <button
           onClick={() => handleAxisClick(activeAxis.key, "+")}
           disabled={
-            !originalText.trim() ||
+            noText ||
             disabledButtons.has(`${activeAxis.key}+` as ButtonId) ||
             loading
           }
@@ -201,7 +237,7 @@ export default function TransformPanel() {
               ? activeAxis.disabledTooltipPlus
               : undefined
           }
-          className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed cursor-pointer"
+          className="flex-1 max-w-48 py-3 rounded-xl text-sm font-semibold transition-all bg-slate-800 text-white hover:bg-slate-700 active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-slate-800 disabled:active:scale-100 cursor-pointer shadow-sm"
         >
           {activeAxis.plusLabel}
         </button>
